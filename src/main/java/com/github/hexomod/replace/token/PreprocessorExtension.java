@@ -1,5 +1,5 @@
 /*
- * This file is part of gradle.replace.token.preprocessor.plugin, licensed under the MIT License (MIT).
+ * This file is part of ReplaceTokenPreprocessor, licensed under the MIT License (MIT).
  *
  * Copyright (c) 2019 Hexosse <https://github.com/hexomod-tools/gradle.replace.token.preprocessor.plugin>
  *
@@ -37,7 +37,6 @@ public class PreprocessorExtension {
      * Name of the extension to use in build.gradle
      */
     public static final String EXTENSION_NAME = "replaceTokenPreprocessorSettings";
-
     /**
      * The current project
      */
