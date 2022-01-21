@@ -3,12 +3,12 @@ plugins {
     id 'java'
     id 'java-gradle-plugin'
     id 'maven-publish'
-    id 'com.gradle.plugin-publish' version '0.11.0'
+    id 'com.gradle.plugin-publish' version '0.20.0'
     id "com.github.hierynomus.license" version "0.15.0"
 }
 
 group = 'com.github.hexomod'
-version = '0.2'
+version = '0.3'
 
 // Minimum java version
 sourceCompatibility = JavaVersion.VERSION_1_8
@@ -25,7 +25,6 @@ tasks.withType(JavaCompile) {
 
 // Repositories for dependencies resolution
 repositories {
-    jcenter()
     mavenCentral()
 }
 
@@ -62,11 +61,11 @@ pluginBundle {
     description = 'A simple java replace token preprocessor plugin'
     tags = ['replace', 'token', 'preprocessor']
 }
+
 gradlePlugin {
     plugins {
         gradleReplaceTokenPreprocessorPlugin {
             id = 'com.github.hexomod.replace.token.preprocessor'
-            displayName = 'A simple java replace token preprocessor plugin'
             implementationClass = 'com.github.hexomod.replace.token.PreprocessorPlugin'
         }
     }
