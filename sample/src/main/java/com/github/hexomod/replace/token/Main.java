@@ -31,5 +31,7 @@ public class Main {
         System.out.println("VERSION = " + VERSION);
         System.out.println("INT = " + INT);
         System.out.println("DOUBLE = " + DOUBLE);
+
+        System.out.println(Greeting.getGreeting());
     }
 }

@@ -23,11 +23,11 @@
  */
 package com.github.hexomod.replace.token;
 
-import org.gradle.api.Project;
+import groovy.lang.Closure;
+import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.tasks.SourceSetContainer;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess","unused"})
@@ -37,10 +37,16 @@ public class PreprocessorExtension {
      * Name of the extension to use in build.gradle
      */
     public static final String EXTENSION_NAME = "replaceTokenPreprocessorSettings";
+
     /**
      * The current project
      */
-    private final Project project;
+    private final ProjectInternal project;
+
+    /**
+     * Project SourceSet
+     */
+    private final SourceSetContainer sourceSets;
 
     /**
      * Enable logging to console while preprocessing files
@@ -48,21 +54,9 @@ public class PreprocessorExtension {
     private boolean verbose;
 
     /**
-     * Source root folders to process
-     * If empty, default project source folder will be used.
+     * Directory where files will be processed
      */
-    private Set<String> sources;
-
-    /**
-     * Resources root folders to process
-     * If empty, default project source folder will be used.
-     */
-    private Set<String> resources;
-
-    /**
-     * Target folder to place the preprocessed files
-     */
-    private File target;
+    private File processDir;
 
     /**
      * File extensions to process
@@ -82,138 +76,50 @@ public class PreprocessorExtension {
     private Map<String, Object> replace = new LinkedHashMap<>();
 
 
-    /**
-     * @param project Current project
-     */
-    public PreprocessorExtension(final Project project) {
+    public PreprocessorExtension(ProjectInternal project, SourceSetContainer sourceSets) {
         this.project = project;
+        this.sourceSets = sourceSets;
         this.verbose = false;
-        this.sources = new LinkedHashSet<>();
-        this.resources = new LinkedHashSet<>();
-        this.target = new File(project.getBuildDir(), "preprocessor/replace");
+        this.processDir = new File(project.getBuildDir(), "preprocessor/replace");
     }
 
-
-    public Project getProject() {
-        return this.project;
+    public Object sourceSets(Closure closure) {
+        return sourceSets.configure(closure);
     }
 
+    public SourceSetContainer getSourceSets() {
+        return sourceSets;
+    }
+
+    public boolean getVerbose() {
+        return verbose;
+    }
 
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
 
-    public boolean isVerbose() {
-        return this.verbose;
+    public File getProcessDir() {
+        return processDir;
     }
 
-
-    public void setSources(String sources) {
-        setSources(new HashSet<>(Collections.singletonList(sources)));
+    public void setProcessDir(File processDir) {
+        this.processDir = processDir;
     }
 
-    public void setSources(List<String> sources) {
-        setSources(new HashSet<>(sources));
-    }
-
-    public void setSources(Set<String> sources) {
-        this.sources.clear();
-        setSource(sources);
-    }
-
-    public void setSource(String source) {
-        setSource(new HashSet<>(Collections.singletonList(source)));
-    }
-
-    public void setSource(List<String> source) {
-        setSource(new HashSet<>(source));
-    }
-
-    public void setSource(Set<String> sources) {
-        // Check that all sources are valid
-        for (String dir : sources) {
-            Path path = new File(dir).toPath();
-            if(Files.isDirectory(path) && Files.exists(path)) {
-                this.sources.add(path.toAbsolutePath().toString());
-                continue;
-            }
-            try {
-                path = new File(this.project.getRootDir(), dir).toPath();
-                if(Files.isDirectory(path) && Files.exists(path)) {
-                    this.sources.add(path.toAbsolutePath().toString());
-                }
-            }
-            catch (Exception ignored) {}
-        }
-    }
-
-    public Set<String> getSources() {
-        return this.sources;
-    }
-
-
-    public void setResources(String resources) {
-        setResources(new HashSet<>(Collections.singletonList(resources)));
-    }
-
-    public void setResources(List<String> resources) {
-        setResources(new HashSet<>(resources));
-    }
-
-    public void setResources(Set<String> resources) {
-        this.resources.clear();
-        setResource(resources);
-    }
-
-    public void setResource(String resource) {
-        setResource(new HashSet<>(Collections.singletonList(resource)));
-    }
-
-    public void setResource(List<String> resource) {
-        setResource(new HashSet<>(resource));
-    }
-
-    public void setResource(Set<String> resources) {
-        // Check that all resources are valid
-        for (String dir : resources) {
-            Path path = new File(dir).toPath();
-            if(Files.isDirectory(path) && Files.exists(path)) {
-                this.resources.add(path.toAbsolutePath().toString());
-                continue;
-            }
-            try {
-                path = new File(this.project.getRootDir(), dir).toPath();
-                if(Files.isDirectory(path) && Files.exists(path)) {
-                    this.resources.add(path.toAbsolutePath().toString());
-                }
-            }
-            catch (Exception ignored) {}
-        }
-    }
-
-    public Set<String> getResources() {
-        return this.resources;
-    }
-
-
-    public void setTarget(File target) {
-        this.target = target;
-    }
-
-    public void setTarget(String target) {
+    public void setProcessDir(String processDir) {
         String buildName = this.project.getBuildDir().getName();
-        if(target.startsWith(buildName)) {
-            setTarget(new File(this.project.getBuildDir().getParentFile(), target));
+        if(processDir.startsWith(buildName)) {
+            setProcessDir(new File(this.project.getBuildDir().getParentFile(), processDir));
         }
         else {
-            setTarget(new File(this.project.getBuildDir(), target));
+            setProcessDir(new File(this.project.getBuildDir(), processDir));
         }
     }
 
-    public File getTarget() {
-        return this.target;
+    public Set<String> getExtensions() {
+        return extensions;
     }
-
 
     public void setExtensions(String extension) {
         setExtensions(Collections.singletonList(extension));
@@ -239,16 +145,11 @@ public class PreprocessorExtension {
         }
     }
 
-    public Set<String> getExtensions() {
-        return extensions;
+    public Map<String, Object> getReplace() {
+        return this.replace;
     }
-
 
     public void setReplace(Map<String, Object> replace) {
         this.replace.putAll(replace);
-    }
-
-    public Map<String, Object> getReplace() {
-        return this.replace;
     }
 }

@@ -5,12 +5,31 @@ A simple replace token preprocessor for java
 
 # How to use
 
-The preprocessor is published in Gradle central
+The preprocessor is published in [Gradle central](https://plugins.gradle.org/plugin/com.github.hexomod.macro.preprocessor).
+
+Using the plugins DSL:
 ```gradle
-plugin {
-    id: 'com.github.hexomod.replace.token.preprocessor'
+plugins {
+  id "com.github.hexomod.replace.token.preprocessor" version "0.3"
 }
 ```
+
+Using legacy plugin application:
+```gradle
+buildscript {
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "com.github.hexomod:ReplaceTokenPreprocessor:0.2"
+  }
+}
+
+apply plugin: "com.github.hexomod.replace.token.preprocessor"
+```
+
 
 # Usage
 
@@ -21,10 +40,9 @@ ext {
 
 macroPreprocessorSettings {
     verbose true
-
     replace '@VERSION@': project.ext.VERSION
 }
 ```
 
-# Internal test sample
+# Examples
 - [sample](sample)

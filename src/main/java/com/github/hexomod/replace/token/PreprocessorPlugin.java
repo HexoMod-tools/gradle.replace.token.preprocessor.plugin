@@ -27,8 +27,11 @@ package com.github.hexomod.replace.token;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.UnknownTaskException;
+import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
+import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 
 @SuppressWarnings({"unused"})
@@ -37,36 +40,42 @@ public class PreprocessorPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
 
-        // Register replace preprocessor extension
-        PreprocessorExtension extension = project.getExtensions().create(
-                PreprocessorExtension.EXTENSION_NAME
-                , PreprocessorExtension.class
-                , project);
-
-        // Register replace token preprocessor task
-        TaskProvider<PreprocessorTask> replaceTokenPreprocessorTask = project.getTasks().register(
-                PreprocessorTask.TASK_ID
-                , PreprocessorTask.class);
-
-        // Make sure java plugin is applied
-        if (!project.getPlugins().hasPlugin(JavaPlugin.class)) {
-            project.getPlugins().apply(JavaPlugin.class);
+        // Preprocessor require either java plugin or java-library plugin
+        if(!project.getPluginManager().hasPlugin("java") && !project.getPluginManager().hasPlugin("java-library")) {
+            throw new IllegalStateException("The \"java\" or \"java-library\" plugin is required by MacroPreprocessor plugin.");
         }
 
-        // Make compileJava task depends on replace token preprocessor
-        Task javaCompile = project.getTasks().getByName("compileJava");
-        javaCompile.dependsOn(replaceTokenPreprocessorTask);
+        // Make sure java plugin is applied
+        project.getPluginManager().apply(JavaPlugin.class);
 
-        // Make macroPreprocessor task depends on replace preprocessor (if exist)
-        try {
-            Task macroPreprocessor = project.getTasks().getByName("macroPreprocessor");
-            macroPreprocessor.dependsOn(replaceTokenPreprocessorTask);
-        } catch (UnknownTaskException ignored) {}
+        //
+        PreprocessorExtension extension = configureExtension(project);
+        configurePreprocessor(project, extension);
+    }
 
-        // Make sourceJava task depends on replace preprocessor (if exist)
-        try {
-            Task sourceJava = project.getTasks().getByName("sourceJava");
-            sourceJava.dependsOn(replaceTokenPreprocessorTask);
-        } catch (UnknownTaskException ignored) {}
+    private PreprocessorExtension configureExtension(Project project) {
+        SourceSetContainer sourceSets = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets();
+        return project.getExtensions().create(
+                PreprocessorExtension.EXTENSION_NAME
+                , PreprocessorExtension.class
+                , project
+                , sourceSets);
+    }
+
+    private void configurePreprocessor(Project project, final PreprocessorExtension extension) {
+        PreprocessorTask preprocessorTask = registerPreprocessorTask(project, extension).get();
+
+        // Get compile task from SourceSet
+        for(SourceSet sourceSet : extension.getSourceSets()) {
+            final Task compileTask = project.getTasks().findByName( sourceSet.getCompileJavaTaskName() );
+            compileTask.dependsOn(preprocessorTask);
+        }
+    }
+
+    private TaskProvider<PreprocessorTask> registerPreprocessorTask(Project project, PreprocessorExtension extension) {
+        return project.getTasks().register(PreprocessorTask.TASK_ID, PreprocessorTask.class, preprocessor -> {
+            preprocessor.setDescription("Replace variables in source code.");
+            preprocessor.setGroup(BasePlugin.BUILD_GROUP);
+        });
     }
 }
