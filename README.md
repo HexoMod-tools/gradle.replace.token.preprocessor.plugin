@@ -35,14 +35,28 @@ apply plugin: "com.github.hexomod.replace.token.preprocessor"
 
 ```gradle
 ext {
-    VERSION = "1.0"
+    VERSION = "1.0.0"
+    VERSION_NUM = "10000"
 }
 
 macroPreprocessorSettings {
-    verbose true
+    verbose = false     // default: false
+
+    //extensions = [ ".properties",  ".yaml",  ".yml" ]
+    //extension = ".java"
+
+    java {
+        enable = true   // default: true
+    }
+
+    resources {
+        enable = true   // default: true
+    }
+
     replace '@VERSION@': project.ext.VERSION
+    replace '@VERSION_NUM@': project.ext.VERSION_NUM
 }
 ```
 
 # Examples
-- [sample](sample)
+- [basic](samples/basic)

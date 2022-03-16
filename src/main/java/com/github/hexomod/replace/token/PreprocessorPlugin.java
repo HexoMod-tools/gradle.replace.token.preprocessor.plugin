@@ -24,15 +24,22 @@
 package com.github.hexomod.replace.token;
 
 
+import com.github.hexomod.replace.token.tasks.PreprocessorJavaTask;
+import com.github.hexomod.replace.token.tasks.PreprocessorResourcesTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
+import org.gradle.api.ProjectConfigurationException;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.language.jvm.tasks.ProcessResources;
+import org.gradle.util.GUtil;
+
+import java.io.File;
 
 @SuppressWarnings({"unused"})
 public class PreprocessorPlugin implements Plugin<Project> {
@@ -42,40 +49,84 @@ public class PreprocessorPlugin implements Plugin<Project> {
 
         // Preprocessor require either java plugin or java-library plugin
         if(!project.getPluginManager().hasPlugin("java") && !project.getPluginManager().hasPlugin("java-library")) {
-            throw new IllegalStateException("The \"java\" or \"java-library\" plugin is required by MacroPreprocessor plugin.");
+            throw new ProjectConfigurationException("The \"java\" or \"java-library\" plugin is required by MacroPreprocessor plugin.",new java.lang.Throwable("void apply(Project project)"));
         }
 
         // Make sure java plugin is applied
         project.getPluginManager().apply(JavaPlugin.class);
 
-        //
+        // Configure extension
         PreprocessorExtension extension = configureExtension(project);
-        configurePreprocessor(project, extension);
+
+        // Configure preprocessors
+        project.afterEvaluate( root -> {
+            configurePreprocessor(project, extension);
+        });
     }
 
     private PreprocessorExtension configureExtension(Project project) {
         SourceSetContainer sourceSets = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets();
         return project.getExtensions().create(
-                PreprocessorExtension.EXTENSION_NAME
+                PreprocessorExtension.NAME
                 , PreprocessorExtension.class
                 , project
                 , sourceSets);
     }
 
     private void configurePreprocessor(Project project, final PreprocessorExtension extension) {
-        PreprocessorTask preprocessorTask = registerPreprocessorTask(project, extension).get();
-
-        // Get compile task from SourceSet
         for(SourceSet sourceSet : extension.getSourceSets()) {
-            final Task compileTask = project.getTasks().findByName( sourceSet.getCompileJavaTaskName() );
-            compileTask.dependsOn(preprocessorTask);
+            if(extension.getEnable() && extension.getJava().getEnable()) {
+                final JavaCompile compileTask = (JavaCompile) project.getTasks().findByName(sourceSet.getCompileJavaTaskName());
+                registerJavaTask(project, extension, sourceSet, compileTask).get();
+            }
+            if(extension.getEnable() && extension.getResources().getEnable()) {
+                final ProcessResources resourceTask = (ProcessResources) project.getTasks().findByName(sourceSet.getProcessResourcesTaskName());
+                registerResourcesTask(project, extension, sourceSet, resourceTask).get();
+            }
         }
     }
 
-    private TaskProvider<PreprocessorTask> registerPreprocessorTask(Project project, PreprocessorExtension extension) {
-        return project.getTasks().register(PreprocessorTask.TASK_ID, PreprocessorTask.class, preprocessor -> {
+    private TaskProvider<PreprocessorJavaTask> registerJavaTask(Project project, PreprocessorExtension extension, SourceSet sourceSet, JavaCompile compileTask) {
+        return project.getTasks().register(PreprocessorJavaTask.TASK_ID + (sourceSet.getName() == "main" ? "" : GUtil.toCamelCase(sourceSet.getName())), PreprocessorJavaTask.class, preprocessor -> {
             preprocessor.setDescription("Replace variables in source code.");
             preprocessor.setGroup(BasePlugin.BUILD_GROUP);
+            preprocessor.setSourceSet(sourceSet);
+
+            File destination = new File(new File(extension.getProcessDir(),"java"), sourceSet.getName());
+
+            preprocessor.setSource(sourceSet.getAllJava());
+            preprocessor.setDestinationDir(destination);
+
+            compileTask.setSource(destination);
+            compileTask.dependsOn(preprocessor);
+
+            preprocessor.doFirst( task -> {
+            });
+
+            preprocessor.doLast( task -> {
+            });
+        });
+    }
+
+    private TaskProvider<PreprocessorResourcesTask> registerResourcesTask(Project project, PreprocessorExtension extension, SourceSet sourceSet, ProcessResources resourcesTask) {
+        return project.getTasks().register(PreprocessorResourcesTask.TASK_ID + (sourceSet.getName() == "main" ? "" : GUtil.toCamelCase(sourceSet.getName())), PreprocessorResourcesTask.class, preprocessor -> {
+            preprocessor.setDescription("Replace variables in source code.");
+            preprocessor.setGroup(BasePlugin.BUILD_GROUP);
+            preprocessor.setSourceSet(sourceSet);
+
+            File destination = new File(new File(extension.getProcessDir(),"resources"), sourceSet.getName());
+
+            preprocessor.from(sourceSet.getResources().getSrcDirs());
+            preprocessor.setDestinationDir(destination);
+
+            resourcesTask.from(preprocessor.getDestinationDir());
+            resourcesTask.dependsOn(preprocessor);
+
+            preprocessor.doFirst( task -> {
+            });
+
+            preprocessor.doLast( task -> {
+            });
         });
     }
 }

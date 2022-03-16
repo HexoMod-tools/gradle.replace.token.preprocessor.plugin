@@ -23,25 +23,32 @@
  */
 package com.github.hexomod.replace.token;
 
+import com.github.hexomod.replace.token.extensions.Java;
+import com.github.hexomod.replace.token.extensions.Resources;
+import com.github.hexomod.replace.token.extensions.SourceType;
 import groovy.lang.Closure;
+import org.gradle.api.Action;
+import org.gradle.api.Project;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.internal.Actions;
+import org.gradle.util.ConfigureUtil;
 
 import java.io.File;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess","unused"})
-public class PreprocessorExtension {
+public class PreprocessorExtension extends SourceType {
 
     /**
      * Name of the extension to use in build.gradle
      */
-    public static final String EXTENSION_NAME = "replaceTokenPreprocessorSettings";
+    public static final String NAME = "replaceTokenPreprocessorSettings";
 
     /**
      * The current project
      */
-    private final ProjectInternal project;
+    private final Project project;
 
     /**
      * Project SourceSet
@@ -49,14 +56,29 @@ public class PreprocessorExtension {
     private final SourceSetContainer sourceSets;
 
     /**
-     * Enable logging to console while preprocessing files
+     * Map of variables to repalce
      */
-    private boolean verbose;
+    private Map<String, Object> replace = new LinkedHashMap<>();
 
     /**
      * Directory where files will be processed
      */
     private File processDir;
+
+    /**
+     * Enable logging to console while preprocessing files
+     */
+    private boolean verbose;
+
+    /**
+     * java files configuration
+     */
+    private final Java java;
+
+    /**
+     * resources files configuration
+     */
+    private final Resources resources;
 
     /**
      * File extensions to process
@@ -70,34 +92,30 @@ public class PreprocessorExtension {
         }
     };
 
-    /**
-     * Map of variables
-     */
-    private Map<String, Object> replace = new LinkedHashMap<>();
-
 
     public PreprocessorExtension(ProjectInternal project, SourceSetContainer sourceSets) {
         this.project = project;
         this.sourceSets = sourceSets;
-        this.verbose = false;
         this.processDir = new File(project.getBuildDir(), "preprocessor/replace");
+        this.verbose = false;
+        this.java = new Java();
+        this.resources = new Resources();
     }
 
-    public Object sourceSets(Closure closure) {
-        return sourceSets.configure(closure);
-    }
 
     public SourceSetContainer getSourceSets() {
         return sourceSets;
     }
 
-    public boolean getVerbose() {
-        return verbose;
+
+    public Map<String, Object> getReplace() {
+        return this.replace;
     }
 
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
+    public void setReplace(Map<String, Object> replace) {
+        this.replace.putAll(replace);
     }
+
 
     public File getProcessDir() {
         return processDir;
@@ -116,6 +134,16 @@ public class PreprocessorExtension {
             setProcessDir(new File(this.project.getBuildDir(), processDir));
         }
     }
+
+
+    public boolean getVerbose() {
+        return verbose;
+    }
+
+    public void setVerbose(boolean verbose) {
+        this.verbose = verbose;
+    }
+
 
     public Set<String> getExtensions() {
         return extensions;
@@ -145,11 +173,37 @@ public class PreprocessorExtension {
         }
     }
 
-    public Map<String, Object> getReplace() {
-        return this.replace;
+
+    public Java getJava() {
+        return java;
     }
 
-    public void setReplace(Map<String, Object> replace) {
-        this.replace.putAll(replace);
+    public Java java(Closure closure) {
+        return ConfigureUtil.configure(closure, java);
+    }
+
+    public Java java(Action<? super Java> action) {
+        return Actions.with(java, action);
+    }
+
+
+    public Resources getResources() {
+        return resources;
+    }
+
+    public Resources resources(Closure closure) {
+        return ConfigureUtil.configure(closure, resources);
+    }
+
+    public Resources resources(Action<? super Resources> action) {
+        return Actions.with(resources, action);
+    }
+
+
+    // Print out a string if verbose is enabled
+    public void log(String msg) {
+        if(getVerbose()) {
+            System.out.println(msg);
+        }
     }
 }
