@@ -33,6 +33,7 @@ import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.language.jvm.tasks.ProcessResources;
+import org.gradle.util.GUtil;
 
 import java.io.File;
 import java.util.stream.Collectors;
@@ -56,14 +57,12 @@ public class PreprocessorPlugin implements Plugin<Project> {
         // Configure extension
         PreprocessorExtension extension = configureExtension(project);
 
-        //
-        PreprocessorTask defaultTask = RegisterDefaultTask(project, extension);
-
         // Register and configure preprocessors task
         project.afterEvaluate(root -> {
             RegisterPreprocessors(project, extension);
         });
     }
+
 
     private PreprocessorExtension configureExtension(Project project) {
         return project.getExtensions().create(
@@ -72,29 +71,8 @@ public class PreprocessorPlugin implements Plugin<Project> {
                 , project);
     }
 
-    private PreprocessorTask RegisterDefaultTask(Project project, PreprocessorExtension extension) {
-        PreprocessorTask defaultTask = project.getTasks().register(PreprocessorTask.TASK_ID, PreprocessorTask.class, preprocessor -> {
-            preprocessor.setDescription("Replace variables in source code.");
-            //preprocessor.setGroup("preprocessor");
 
-            preprocessor.doFirst(task -> {
-            });
-
-            preprocessor.doLast(task -> {
-            });
-        }).get();
-
-        // Make macroPreprocessor task depends on replacePreprocessor (if exist)
-        try {
-            Task macroPreprocessor = project.getTasks().getByName("macroPreprocessor");
-            macroPreprocessor.dependsOn(defaultTask);
-        } catch (UnknownTaskException ignored) {
-        }
-
-        return defaultTask;
-    }
-
-    private void RegisterPreprocessors(Project project, PreprocessorExtension extension) {
+    private void RegisterPreprocessors(final Project project, final PreprocessorExtension extension) {
         // Get all sourceSet to create one preprocessor per sourceSet
         final SourceSetContainer sourceSets = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets();
 
@@ -104,18 +82,20 @@ public class PreprocessorPlugin implements Plugin<Project> {
             if (extension.getEnable() && extension.getJava().getEnable()) {
                 final JavaCompile compileTask = (JavaCompile) project.getTasks().findByName(sourceSet.getCompileJavaTaskName());
                 PreprocessorTask preprocessor = RegisterJavaPreprocessor(project, extension, sourceSet, compileTask).get();
-                compileTask.dependsOn(preprocessor);
+                makeDependsOn(project, "macroPreprocessor" + (sourceSet.getName() == "main" ? "" : GUtil.toCamelCase(sourceSet.getName())) + "Java", preprocessor);
+                makeDependsOn(compileTask, preprocessor);
             }
             // Resources files
             if (extension.getEnable() && extension.getResources().getEnable()) {
                 final ProcessResources resourceTask = (ProcessResources) project.getTasks().findByName(sourceSet.getProcessResourcesTaskName());
                 PreprocessorTask preprocessor = RegisterResourcesPreprocessor(project, extension, sourceSet, resourceTask).get();
-                resourceTask.dependsOn(preprocessor);
+                makeDependsOn(project, "macroPreprocessor" + (sourceSet.getName() == "main" ? "" : GUtil.toCamelCase(sourceSet.getName())) + "Resource", preprocessor);
+                makeDependsOn(resourceTask, preprocessor);
             }
         }
     }
 
-    private TaskProvider<PreprocessorTask> RegisterJavaPreprocessor(Project project, PreprocessorExtension extension, SourceSet sourceSet, JavaCompile compileTask) {
+    private TaskProvider<PreprocessorTask> RegisterJavaPreprocessor(final Project project, final PreprocessorExtension extension, SourceSet sourceSet, JavaCompile compileTask) {
         return project.getTasks().register(PreprocessorTask.getJavaTaskName(sourceSet), PreprocessorTask.class, preprocessor -> {
             preprocessor.setDescription("Replace variables in source code.");
             preprocessor.setGroup("preprocessor");
@@ -132,7 +112,7 @@ public class PreprocessorPlugin implements Plugin<Project> {
         });
     }
 
-    private TaskProvider<PreprocessorTask> RegisterResourcesPreprocessor(Project project, PreprocessorExtension extension, SourceSet sourceSet, ProcessResources resourcesTask) {
+    private TaskProvider<PreprocessorTask> RegisterResourcesPreprocessor(final Project project, final PreprocessorExtension extension, SourceSet sourceSet, ProcessResources resourcesTask) {
         return project.getTasks().register(PreprocessorTask.getResourceTaskName(sourceSet), PreprocessorTask.class, preprocessor -> {
             preprocessor.setDescription("Replace variables in source code.");
             preprocessor.setGroup("preprocessor");
@@ -146,5 +126,26 @@ public class PreprocessorPlugin implements Plugin<Project> {
             preprocessor.doLast(task -> {
             });
         });
+    }
+
+
+    private void makeDependsOn(Task instance, Task task) {
+        instance.dependsOn(task);
+    }
+
+    private void makeDependsOn(final Project project, Task instance, String taskName) {
+        try {
+            Task task = project.getTasks().getByName(taskName);
+            makeDependsOn(instance, task);
+        } catch (UnknownTaskException ignored) {
+        }
+    }
+
+    private void makeDependsOn(final Project project, String instanceName, Task task) {
+        try {
+            Task instance = project.getTasks().getByName(instanceName);
+            makeDependsOn(instance, task);
+        } catch (UnknownTaskException ignored) {
+        }
     }
 }

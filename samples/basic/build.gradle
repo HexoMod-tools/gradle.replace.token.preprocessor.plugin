@@ -6,6 +6,7 @@ buildscript {
     }
     dependencies {
         classpath group: 'com.github.hexomod', name: 'ReplaceTokenPreprocessor', version: '0.4-SNAPSHOT'
+        classpath group: 'com.github.hexomod', name: 'MacroPreprocessor', version: '0.9-SNAPSHOT'
     }
 }
 
@@ -15,6 +16,7 @@ plugins {
 }
 
 apply plugin: "com.github.hexomod.replace.token.preprocessor"
+apply plugin: "com.github.hexomod.macro.preprocessor"
 
 repositories {
     mavenLocal()
