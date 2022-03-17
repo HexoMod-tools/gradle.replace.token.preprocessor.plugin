@@ -21,17 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.github.hexomod.replace.token.tasks;
+package com.github.hexomod.replace.token;
 
-
-import com.github.hexomod.replace.token.Preprocessor;
-import com.github.hexomod.replace.token.PreprocessorExtension;
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.Copy;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.SourceTask;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.language.base.internal.tasks.SimpleStaleClassCleaner;
+import org.gradle.language.base.internal.tasks.StaleClassCleaner;
+import org.gradle.util.GUtil;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -39,73 +39,81 @@ import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-@SuppressWarnings({"WeakerAccess","unused"})
-public class PreprocessorJavaTask extends SourceTask {
 
-    // The task ID
-    public static final String TASK_ID = "replacePreprocessorJava";
+public class PreprocessorTask extends Copy {
+
+    // The task names
+    public static final String TASK_ID = "replacePreprocessor";
+    public static final String TASK_RESOURCE_SUFFIX = "Resource";
+    public static final String TASK_JAVA_SUFFIX = "Java";
+    public static String getResourceTaskName(SourceSet sourceSet) {
+        return TASK_ID + (sourceSet.getName() == "main" ? "" : GUtil.toCamelCase(sourceSet.getName())) + TASK_RESOURCE_SUFFIX;
+    }
+    public static String getJavaTaskName(SourceSet sourceSet) {
+        return TASK_ID + (sourceSet.getName() == "main" ? "" : GUtil.toCamelCase(sourceSet.getName())) + TASK_JAVA_SUFFIX;
+    }
 
     private final Project project;
     private final PreprocessorExtension extension;
+
+    @Nested
     private SourceSet sourceSet;
 
-    @OutputDirectory
-    private File destinationDir;
 
     @Inject
-    public PreprocessorJavaTask() {
+    public PreprocessorTask() {
         this.project = getProject();
         this.extension = getProject().getExtensions().findByType(PreprocessorExtension.class);
     }
 
-    public SourceSet getSourceSet() {
-        return sourceSet;
+    public void setSourceSet(SourceSet sourceSets) {
+        this.sourceSet = sourceSets;
     }
 
-    public void setSourceSet(SourceSet sourceSet) {
-        this.sourceSet = sourceSet;
-    }
-
-    public File getDestinationDir() {
-        return project.file(destinationDir);
-    }
-
-    public void setDestinationDir(File destinationDir) {
-        this.destinationDir = destinationDir;
+    protected void copy() {
+        if(sourceSet != null) {
+            extension.log("Copying files ...");
+            StaleClassCleaner cleaner = new SimpleStaleClassCleaner(this.getOutputs());
+            cleaner.addDirToClean(this.getDestinationDir());
+            cleaner.execute();
+            super.copy();
+        }
     }
 
     @TaskAction
     public void process() throws IOException {
-        extension.log("Processing java files ...");
-        processSourceSet();
+        if(sourceSet != null) {
+            extension.log("Processing files ...");
+            processSourceSet();
+        }
     }
 
     private void processSourceSet() throws IOException {
         extension.log("  Processing sourceSet : " + sourceSet.getName());
 
-        SourceDirectorySet javaDirectorySet = sourceSet.getJava();
-        /*Set<File> srcDirs =*/ processSourceDirectorySet(javaDirectorySet, sourceSet.getName());
+        if(getName().equals(getResourceTaskName(sourceSet))) {
+            SourceDirectorySet resourceDirectorySet = sourceSet.getResources();
+            processSourceDirectorySet(resourceDirectorySet);
+        }
+
+        if(getName().equals(getJavaTaskName(sourceSet))) {
+            SourceDirectorySet resourceDirectorySet = sourceSet.getJava();
+            processSourceDirectorySet(resourceDirectorySet);
+        }
     }
 
-    private Set<File> processSourceDirectorySet(final SourceDirectorySet sourceDirectorySet, String sourceSetName) throws IOException {
+    private void processSourceDirectorySet(final SourceDirectorySet sourceDirectorySet) throws IOException {
         extension.log("    Processing directory : " + sourceDirectorySet.getName());
 
         Set<File> dirs = new LinkedHashSet<File>();
         Preprocessor preprocessor = new Preprocessor(this.extension.getExtensions(), this.extension.getReplace());
 
         for (File sourceDirectory : sourceDirectorySet.getSrcDirs()) {
-            String resourceDirName = sourceDirectory.getName();
-
-            File destination = getDestinationDir();
-            dirs.add(destination);
-
             for (File sourceFile : project.fileTree(sourceDirectory)) {
                 extension.log("    Processing " + sourceFile.toString());
-                File processFile = destination.toPath().resolve(sourceDirectory.toPath().relativize(sourceFile.toPath())).toFile();
+                File processFile = getDestinationDir().toPath().resolve(sourceDirectory.toPath().relativize(sourceFile.toPath())).toFile();
                 preprocessor.process(sourceFile, processFile);
             }
         }
-
-        return dirs;
     }
 }
