@@ -26,6 +26,7 @@ tasks.withType(JavaCompile) {
 // Repositories for dependencies resolution
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 // Dependencies of this plugin

@@ -36,7 +36,7 @@ import org.gradle.util.ConfigureUtil;
 import java.io.File;
 import java.util.*;
 
-@SuppressWarnings({"WeakerAccess","unused"})
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class PreprocessorExtension extends SourceType {
 
     /**
@@ -115,10 +115,9 @@ public class PreprocessorExtension extends SourceType {
 
     public void setProcessDir(String processDir) {
         String buildName = this.project.getBuildDir().getName();
-        if(processDir.startsWith(buildName)) {
+        if (processDir.startsWith(buildName)) {
             setProcessDir(new File(this.project.getBuildDir().getParentFile(), processDir));
-        }
-        else {
+        } else {
             setProcessDir(new File(this.project.getBuildDir(), processDir));
         }
     }
@@ -147,16 +146,15 @@ public class PreprocessorExtension extends SourceType {
     }
 
     public void setExtension(String extension) {
-        if(extension.startsWith(".")) {
+        if (extension.startsWith(".")) {
             this.extensions.add(extension.substring(1));
-        }
-        else {
+        } else {
             this.extensions.add(extension);
         }
     }
 
     public void setExtension(List<String> extensions) {
-        for(String extension : extensions) {
+        for (String extension : extensions) {
             setExtension(extension);
         }
     }
@@ -190,7 +188,7 @@ public class PreprocessorExtension extends SourceType {
 
     // Print out a string if verbose is enabled
     public void log(String msg) {
-        if(getVerbose()) {
+        if (getVerbose()) {
             System.out.println(msg);
         }
     }
