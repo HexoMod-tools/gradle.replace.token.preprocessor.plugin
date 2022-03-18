@@ -10,7 +10,7 @@ The preprocessor is published in [Gradle central](https://plugins.gradle.org/plu
 Using the plugins DSL:
 ```gradle
 plugins {
-  id "com.github.hexomod.replace.token.preprocessor" version "0.3"
+  id "com.github.hexomod.replace.token.preprocessor" version "0.4"
 }
 ```
 
@@ -23,7 +23,7 @@ buildscript {
     }
   }
   dependencies {
-    classpath "com.github.hexomod:ReplaceTokenPreprocessor:0.2"
+    classpath "com.github.hexomod:ReplaceTokenPreprocessor:0.4"
   }
 }
 
