@@ -27,6 +27,7 @@ package com.github.hexomod.replace.token;
 import org.gradle.api.*;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -103,12 +104,6 @@ public class PreprocessorPlugin implements Plugin<Project> {
             preprocessor.from(sourceSet.getJava().getSrcDirs());
             preprocessor.exclude(sourceSet.getResources().getSrcDirs().stream().map(File::getPath).collect(Collectors.toList()));
             preprocessor.setDestinationDir(new File(new File(extension.getProcessDir(), sourceSet.getName()), "java"));
-
-            preprocessor.doFirst(task -> {
-            });
-
-            preprocessor.doLast(task -> {
-            });
         });
     }
 
@@ -119,12 +114,6 @@ public class PreprocessorPlugin implements Plugin<Project> {
             preprocessor.setSourceSet(sourceSet);
             preprocessor.from(sourceSet.getResources().getSrcDirs());
             preprocessor.setDestinationDir(new File(new File(extension.getProcessDir(), sourceSet.getName()), "resources"));
-
-            preprocessor.doFirst(task -> {
-            });
-
-            preprocessor.doLast(task -> {
-            });
         });
     }
 
