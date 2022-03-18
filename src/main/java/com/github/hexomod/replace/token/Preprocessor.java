@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@SuppressWarnings({"WeakerAccess","unused"})
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class Preprocessor {
 
     private final List<String> extensions;
@@ -49,8 +49,10 @@ public class Preprocessor {
         String fileExtension = FilenameUtils.getExtension(inFile.getName());
         // First check if the file need to be processed
         // If not, the file is just copied to its destination
-        if(!this.extensions.contains(fileExtension)) {
-            FileUtils.copyFile(inFile, outFile);
+        if (!this.extensions.contains(fileExtension)) {
+            if (!inFile.equals(outFile)) {
+                FileUtils.copyFile(inFile, outFile);
+            }
         }
         // If yes, the file is processed
         else {
@@ -63,9 +65,8 @@ public class Preprocessor {
                 // Create parent folder if needed
                 FileUtils.forceMkdirParent(outFile);
                 // Write output file
-                FileUtils.writeLines(outFile, StandardCharsets.UTF_8.toString(), lines, "\n", false );
-            }
-            catch (Exception e) {
+                FileUtils.writeLines(outFile, StandardCharsets.UTF_8.toString(), lines, "\n", false);
+            } catch (Exception e) {
                 throw new RuntimeException("Failed to convert file " + inFile, e);
             }
         }
@@ -74,7 +75,7 @@ public class Preprocessor {
     List<String> processLines(List<String> lines) {
         List<String> newLines = new ArrayList<>();
         // Loop through all lines
-        for(String line : lines) {
+        for (String line : lines) {
             newLines.add(processLine(line));
         }
         return newLines;
@@ -82,7 +83,7 @@ public class Preprocessor {
 
     String processLine(String line) {
         final String[] newLine = {line};
-        this.replace.forEach( (key, value) -> {
+        this.replace.forEach((key, value) -> {
             newLine[0] = newLine[0].replace(key, value.toString());
         });
         return newLine[0];

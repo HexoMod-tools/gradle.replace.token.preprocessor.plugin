@@ -5,8 +5,8 @@ buildscript {
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath group: 'com.github.hexomod', name: 'ReplaceTokenPreprocessor', version: '0.3'
-        classpath group: 'com.github.hexomod', name: 'MacroPreprocessor', version: '0.8'
+        classpath group: 'com.github.hexomod', name: 'ReplaceTokenPreprocessor', version: '0.4'
+        classpath group: 'com.github.hexomod', name: 'MacroPreprocessor', version: '0.9'
     }
 }
 
@@ -44,17 +44,12 @@ sourceSets {
 
 // compile depends on the api sourceSet
 dependencies {
-    compile sourceSets.api.output
+    implementation sourceSets.api.output
 }
 
 // include output of api sourceSet
 jar{
     from sourceSets.api.output
-}
-
-// Ensure macroPreprocessor is called before the api compiles
-tasks.withType(JavaCompile).configureEach {
-    dependsOn macroPreprocessor
 }
 
 ext {
@@ -65,17 +60,23 @@ ext {
 }
 
 replaceTokenPreprocessorSettings {
-    verbose true
+    verbose = false     // default: false
+
     //extensions = [ ".properties",  ".yaml",  ".yml" ]
     //extension = ".java"
+
+    java {
+        enable = true   // default: true
+    }
+
+    resources {
+        enable = true   // default: true
+    }
+
     replace '@VERSION@': project.ext.VERSION
+    replace '@VERSION_NUM@': project.ext.VERSION_NUM
     replace '@INT@': project.ext.INT
     replace '@DOUBLE@': project.ext.DOUBLE
     replace '@DEBUG@': true
     replace '@HELLO@': 'world'
-}
-
-macroPreprocessorSettings {
-    verbose true
-    vars = [VERSION_NUM: project.ext.VERSION_NUM]
 }
